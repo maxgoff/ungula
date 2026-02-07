@@ -36,6 +36,8 @@ from .api.routes import plugins as plugin_routes
 from .api.routes import usage as usage_routes
 from .api.routes import agents_config as agents_config_routes
 from .api.routes import runtime as runtime_routes
+from .api.routes import events as events_routes
+from .api.routes import queue as queue_routes
 from .api.ws_manager import ConnectionManager
 from .auth import configure_auth
 from .messaging import ChannelRegistry
@@ -45,7 +47,7 @@ from .config import get_data_dir, get_ungula_home, get_workspace_dir, init_ungul
 from .llm import create_registry_from_config
 from .skills.loader import SkillLoader, SkillRegistry
 from .storage import SQLiteStorage
-from .tools import BraveSearchConfig, TavilySearchConfig, ToolRegistry, WebSearchTool
+from .tools import BraveSearchConfig, TavilySearchConfig, ToolRegistry, ToolResultCache, WebSearchTool
 from .tools.policy import PolicyEngine, PolicyProfile, ToolPolicy
 
 # Configure logging
@@ -108,8 +110,12 @@ async def lifespan(app: FastAPI):
     app.state.registry = registry
     logger.info("Initialized LLM registry with providers: %s", registry.list_providers())
 
+    # Initialize tool result cache
+    tool_cache = ToolResultCache()
+    app.state.tool_cache = tool_cache
+
     # Initialize tool registry
-    tool_registry = ToolRegistry()
+    tool_registry = ToolRegistry(cache=tool_cache)
     app.state.tool_registry = tool_registry
 
     # Initialize skill registry
@@ -296,6 +302,42 @@ async def lifespan(app: FastAPI):
     app.state.cron_scheduler = cron_scheduler
     logger.info("Initialized cron scheduler")
 
+    # Initialize event bus
+    from .events import ActionExecutor, EventBus, EventRuleStore
+
+    event_rule_store = EventRuleStore()
+    action_executor = ActionExecutor(
+        agent_runner=app.state.agent_runner,
+        tool_registry=tool_registry,
+    )
+    event_bus = EventBus(store=event_rule_store, action_executor=action_executor)
+    app.state.event_bus = event_bus
+    tool_registry._event_bus = event_bus
+    logger.info("Initialized event bus")
+
+    # Initialize task queue
+    from .queue import QueueManager
+
+    queue_manager = QueueManager(redis_config=config.redis)
+    await queue_manager.initialize()
+
+    # Register agent_run handler
+    async def _agent_run_handler(job):
+        conversation_id = job.payload.get("conversation_id")
+        message = job.payload.get("message", "")
+        if conversation_id:
+            result = await app.state.agent_runner.run(
+                conversation_id=conversation_id,
+                user_message=message,
+            )
+            return {"content": result.content}
+        return {"error": "No conversation_id in payload"}
+
+    queue_manager.register_handler("agent_run", _agent_run_handler)
+    await queue_manager.start_worker()
+    app.state.queue_manager = queue_manager
+    logger.info("Initialized task queue (backend=%s)", queue_manager._backend_type)
+
     # Initialize pairing manager
     from .pairing import PairingManager
 
@@ -361,6 +403,7 @@ async def lifespan(app: FastAPI):
             webhook_manager = WebhookManager(
                 storage=_storage,
                 agent_runner=app.state.agent_runner,
+                event_bus=event_bus,
             )
             app.state.webhook_manager = webhook_manager
             logger.info("Initialized webhook system")
@@ -446,12 +489,16 @@ async def lifespan(app: FastAPI):
         session_manager=app.state.session_manager,
         channel_registry=app.state.channel_registry,
         ws_manager=ws_manager,
+        event_bus=event_bus,
     )
     logger.info("Initialized message router")
 
     # Create message callback for channels
     on_message = await create_message_callback(app.state.message_router)
     app.state.channel_registry._on_message = on_message
+
+    # Wire channel_registry into action executor now that it exists
+    action_executor.channel_registry = app.state.channel_registry
 
     # Register and start Discord if enabled
     if config.messaging.discord.enabled and config.messaging.discord.token:
@@ -585,6 +632,12 @@ async def lifespan(app: FastAPI):
         await browser_mgr.stop()
         logger.info("Stopped browser manager")
 
+    # Cleanup queue worker
+    qm = getattr(app.state, "queue_manager", None)
+    if qm:
+        await qm.stop_worker()
+        logger.info("Stopped queue worker")
+
     # Cleanup cron scheduler
     scheduler = getattr(app.state, "cron_scheduler", None)
     if scheduler:
@@ -688,6 +741,8 @@ app.include_router(plugin_routes.router, prefix="/api/plugins", tags=["plugins"]
 app.include_router(usage_routes.router, prefix="/api/usage", tags=["usage"])
 app.include_router(agents_config_routes.router, prefix="/api/agents", tags=["agents"])
 app.include_router(runtime_routes.router, prefix="/api/runtime", tags=["runtime"])
+app.include_router(events_routes.router, prefix="/api/events", tags=["events"])
+app.include_router(queue_routes.router, prefix="/api/queue", tags=["queue"])
 app.include_router(ws_routes.router, tags=["websocket"])
 app.include_router(ws_node_routes.router, tags=["websocket"])
 

@@ -98,10 +98,14 @@ class CronScheduler:
         store: CronStore | None = None,
         executor: JobExecutor | None = None,
         tick_interval: float = 30.0,
+        event_bus: Any = None,
+        queue_manager: Any = None,
     ):
         self.store = store or CronStore()
         self.executor = executor
         self.tick_interval = tick_interval
+        self.event_bus = event_bus
+        self.queue_manager = queue_manager
         self._task: asyncio.Task | None = None
         self._running = False
 
@@ -166,6 +170,22 @@ class CronScheduler:
             next_run = compute_next_run(job)
             self.store.mark_run(job.id, success=True, next_run=next_run)
             logger.info("Cron job %s completed, next run: %s", job.id, next_run)
+
+            # Emit cron.fired event
+            if self.event_bus:
+                try:
+                    from ..events.types import Event
+
+                    self.event_bus.emit(Event(
+                        type="cron.fired",
+                        data={
+                            "job_id": job.id,
+                            "job_name": job.name,
+                            "action": job.action,
+                        },
+                    ))
+                except Exception:
+                    pass
 
         except Exception as e:
             logger.error("Cron job %s failed: %s", job.id, e)

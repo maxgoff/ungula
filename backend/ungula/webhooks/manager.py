@@ -29,9 +29,10 @@ logger = logging.getLogger(__name__)
 class WebhookManager:
     """Manages webhooks: CRUD, receive, verify, process, dispatch."""
 
-    def __init__(self, storage: Any, agent_runner: Any = None):
+    def __init__(self, storage: Any, agent_runner: Any = None, event_bus: Any = None):
         self.storage = storage
         self.agent_runner = agent_runner
+        self.event_bus = event_bus
 
     # --- CRUD ---
 
@@ -184,6 +185,23 @@ class WebhookManager:
             webhook.id, payload, headers,
             processed_content=processed, status="processed"
         )
+
+        # Emit webhook.received event
+        if self.event_bus:
+            try:
+                from ..events.types import Event
+
+                self.event_bus.emit(Event(
+                    type="webhook.received",
+                    data={
+                        "webhook_id": webhook.id,
+                        "webhook_name": webhook.name,
+                        "preset": webhook.preset,
+                        "event_id": event_id,
+                    },
+                ))
+            except Exception:
+                pass
 
         # Dispatch to agent if configured
         if webhook.trigger_agent and self.agent_runner and webhook.target_conversation_id:

@@ -59,6 +59,8 @@ class UrlFetchTool(Tool):
 
     name = "url_fetch"
     description = "Fetch content from a URL. Supports GET and POST methods."
+    cacheable = True
+    cache_ttl = 120
     parameters = {
         "type": "object",
         "properties": {

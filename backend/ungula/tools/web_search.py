@@ -52,6 +52,7 @@ class WebSearchTool(Tool):
 
     name = "web_search"
     description = "Search the web for information. Use this when you need current information, facts, or to look up something you don't know."
+    cacheable = True
     parameters = [
         ToolParameter(
             name="query",

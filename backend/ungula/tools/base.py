@@ -4,9 +4,12 @@ Base Tool Interface.
 Defines the abstract Tool class and ToolResult for tool implementations.
 """
 
+import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -47,6 +50,8 @@ class Tool(ABC):
     name: str
     description: str
     parameters: list[ToolParameter] = []
+    cacheable: bool = False
+    cache_ttl: int = 300
 
     @abstractmethod
     async def execute(self, **kwargs: Any) -> ToolResult:
@@ -96,8 +101,10 @@ class Tool(ABC):
 class ToolRegistry:
     """Registry for available tools."""
 
-    def __init__(self):
+    def __init__(self, cache=None, event_bus=None):
         self._tools: dict[str, Tool] = {}
+        self._cache = cache
+        self._event_bus = event_bus
 
     def register(self, tool: Tool) -> None:
         """Register a tool."""
@@ -120,7 +127,7 @@ class ToolRegistry:
         return [tool.get_schema() for tool in self._tools.values()]
 
     async def execute(self, name: str, **kwargs: Any) -> ToolResult:
-        """Execute a tool by name."""
+        """Execute a tool by name, with optional caching and event emission."""
         tool = self.get(name)
         if not tool:
             return ToolResult(
@@ -128,7 +135,37 @@ class ToolRegistry:
                 output="",
                 error=f"Unknown tool: {name}",
             )
-        return await tool.execute(**kwargs)
+
+        # Check cache for cacheable tools
+        cache_key = None
+        if self._cache and tool.cacheable:
+            from .cache import ToolResultCache
+
+            cache_key = ToolResultCache.make_key(name, kwargs)
+            cached = self._cache.get(cache_key)
+            if cached is not None:
+                logger.debug("Cache hit for %s", name)
+                return cached
+
+        result = await tool.execute(**kwargs)
+
+        # Store successful results in cache
+        if cache_key and result.success:
+            self._cache.put(cache_key, result, tool.cache_ttl)
+
+        # Emit tool.executed event
+        if self._event_bus and result.success:
+            try:
+                from ..events.types import Event
+
+                self._event_bus.emit(Event(
+                    type="tool.executed",
+                    data={"tool_name": name, "args": kwargs},
+                ))
+            except Exception:
+                pass
+
+        return result
 
     def get_tool_definitions(self) -> list:
         """Get ToolDefinition objects for LLM CompletionRequest.

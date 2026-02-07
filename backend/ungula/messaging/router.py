@@ -42,6 +42,7 @@ class MessageRouter:
     channel_registry: ChannelRegistry
     ws_manager: ConnectionManager | None = None
     default_user_id: UUID | None = None
+    event_bus: Any = None
 
     async def dispatch(self, message: InboundMessage) -> SendResult:
         """
@@ -79,6 +80,24 @@ class MessageRouter:
 
             # 3. Persist inbound message to inbox
             await self.session_manager.record_inbound_message(session, message)
+
+            # 3b. Emit message.received event
+            if self.event_bus:
+                try:
+                    from ..events.types import Event
+
+                    self.event_bus.emit(Event(
+                        type="message.received",
+                        data={
+                            "channel": message.channel,
+                            "sender_id": message.sender_id,
+                            "sender_name": message.sender_name,
+                            "content_preview": message.content[:200],
+                            "session_id": str(session.id),
+                        },
+                    ))
+                except Exception:
+                    pass
 
             # 4. Also persist to conversation for agent context
             user_msg_data = MessageCreate(
