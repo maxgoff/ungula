@@ -68,11 +68,15 @@ async function apiFetch(endpoint, options = {}) {
     } catch {
       // Response may not be JSON
     }
-    throw new ApiError(
-      data?.detail || `Request failed with status ${response.status}`,
-      response.status,
-      data
-    );
+    let message = `Request failed with status ${response.status}`;
+    if (data?.detail) {
+      if (typeof data.detail === 'string') {
+        message = data.detail;
+      } else if (Array.isArray(data.detail)) {
+        message = data.detail.map(e => e.msg || JSON.stringify(e)).join('; ');
+      }
+    }
+    throw new ApiError(message, response.status, data);
   }
 
   // Handle empty responses
