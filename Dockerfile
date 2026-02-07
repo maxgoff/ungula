@@ -29,8 +29,9 @@ COPY backend/ungula/ ./ungula/
 # Copy frontend dist
 COPY --from=frontend-build /build/dist ./frontend/dist
 
-# Data volume
+# Data volume — create and own before switching user
 ENV UNGULA_HOME=/data
+RUN mkdir -p /data && chown ungula:ungula /data
 VOLUME ["/data"]
 
 # Switch to non-root user
