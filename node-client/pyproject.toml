@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ungula-node"
+version = "0.1.0"
+description = "Headless Python client for connecting to an Ungula gateway as a companion device node"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Max Goff"}
+]
+dependencies = [
+    "websockets>=12.0",
+    "click>=8.1.0",
+]
+
+[project.scripts]
+ungula-node = "ungula_node.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]

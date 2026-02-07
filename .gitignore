@@ -1,0 +1,73 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Testing / linting caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# Node / Frontend
+node_modules/
+frontend/dist/
+frontend/dist-ssr/
+*.local
+
+# IDE
+.vscode/
+.idea/
+*.sw?
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets and config (never commit real keys)
+.env
+.env.*
+*.pem
+*.key
+
+# Ungula runtime data (lives in ~/.ungula, not in repo)
+*.db
+*.sqlite
+
+# Claude Code
+.claude/
+CLAUDE.md
+
+# Internal planning docs
+PLAN.md
+
+# Logs
+*.log
+logs/
+
+# Project-specific secrets
+discord.txt
+
+# Accidental artifacts
+*.deb
+backend/=*
+
+# Misc
+*.local

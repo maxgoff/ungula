@@ -1,0 +1,41 @@
+# Core framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Database
+sqlalchemy>=2.0.0
+aiosqlite>=0.19.0
+alembic>=1.13.0
+
+# HTTP client
+httpx>=0.26.0
+
+# Message queue
+redis>=5.0.0
+
+# Configuration
+pyyaml>=6.0
+python-frontmatter>=1.0.0
+
+# Memory/Embeddings
+chromadb>=0.4.0
+sentence-transformers>=2.2.0
+
+# Messaging
+discord.py>=2.3.0
+
+# LLM providers
+anthropic>=0.18.0
+openai>=1.10.0
+google-generativeai>=0.3.0
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.23.0
+pytest-cov>=4.1.0
+
+# Development
+ruff>=0.1.0
+mypy>=1.8.0
