@@ -29,6 +29,9 @@ COPY backend/ungula/ ./ungula/
 # Copy frontend dist
 COPY --from=frontend-build /build/dist ./frontend/dist
 
+# Copy workspace templates
+COPY docs/templates/ ./docs/templates/
+
 # Data volume — create and own before switching user
 ENV UNGULA_HOME=/data
 RUN mkdir -p /data && chown ungula:ungula /data

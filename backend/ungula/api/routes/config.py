@@ -202,7 +202,10 @@ async def initialize_workspace(
     """
     from pathlib import Path
 
+    # Try source tree first, then Docker/production path
     templates_dir = Path(__file__).parent.parent.parent.parent.parent / "docs" / "templates"
+    if not templates_dir.is_dir():
+        templates_dir = Path("/app/docs/templates")
     files_created = []
     files_skipped = []
 

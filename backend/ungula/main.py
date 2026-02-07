@@ -83,6 +83,19 @@ async def lifespan(app: FastAPI):
     init_ungula_dirs()
     logger.info("Initialized Ungula directories")
 
+    # Auto-initialize workspace templates if workspace is empty
+    workspace_dir = get_workspace_dir()
+    if not any(workspace_dir.glob("*.md")):
+        templates_dir = Path(__file__).parent.parent.parent / "docs" / "templates"
+        if not templates_dir.is_dir():
+            templates_dir = Path("/app/docs/templates")
+        if templates_dir.is_dir():
+            from .config import save_workspace_file
+
+            for tmpl in templates_dir.glob("*.md"):
+                save_workspace_file(tmpl.name, tmpl.read_text())
+            logger.info("Initialized workspace from templates (%s)", templates_dir)
+
     # Load configuration
     config = load_config()
     app.state.config = config
@@ -122,8 +135,6 @@ async def lifespan(app: FastAPI):
     # Initialize skill registry
     skill_registry = SkillRegistry()
     if config.skills.enabled:
-        from pathlib import Path
-
         loader = SkillLoader(config)
         bundled_dir = Path(__file__).parent / "skills" / "builtin"
         user_dir = get_ungula_home() / "skills"
