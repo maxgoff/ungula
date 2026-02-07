@@ -6,6 +6,7 @@ Main entry point for the Ungula backend server.
 
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Request as FastAPIRequest
@@ -746,6 +747,15 @@ app.include_router(queue_routes.router, prefix="/api/queue", tags=["queue"])
 app.include_router(ws_routes.router, tags=["websocket"])
 app.include_router(ws_node_routes.router, tags=["websocket"])
 
+# Serve frontend static files if dist directory exists (Docker/production)
+_frontend_dist = Path(__file__).parent.parent.parent / "frontend" / "dist"
+if not _frontend_dist.is_dir():
+    _frontend_dist = Path("/app/frontend/dist")
+if _frontend_dist.is_dir():
+    from fastapi.staticfiles import StaticFiles
+
+    app.mount("/", StaticFiles(directory=str(_frontend_dist), html=True), name="frontend")
+
 
 async def rebuild_registry(app_instance: FastAPI) -> None:
     """Rebuild the LLM registry from current config, closing old providers."""
@@ -767,18 +777,36 @@ async def rebuild_registry(app_instance: FastAPI) -> None:
     logger.info("Rebuilt LLM registry with providers: %s", new_registry.list_providers())
 
 
-def run():
+def run(
+    host: str | None = None,
+    port: int | None = None,
+    ssl_certfile: str | None = None,
+    ssl_keyfile: str | None = None,
+):
     """Run the server using uvicorn."""
     import uvicorn
 
     config = load_config()
-    uvicorn.run(
-        "ungula.main:app",
-        host=config.server.host,
-        port=config.server.port,
-        reload=config.server.reload,
-        workers=config.server.workers,
-    )
+    kwargs: dict = {
+        "host": host or config.server.host,
+        "port": port or config.server.port,
+        "reload": config.server.reload,
+        "workers": config.server.workers,
+    }
+
+    # TLS: CLI args take precedence, then config file
+    cert = ssl_certfile or getattr(config.server, "tls_cert_path", None)
+    key = ssl_keyfile or getattr(config.server, "tls_key_path", None)
+    if cert and key:
+        from pathlib import Path
+
+        if Path(cert).is_file() and Path(key).is_file():
+            kwargs["ssl_certfile"] = cert
+            kwargs["ssl_keyfile"] = key
+        else:
+            logger.warning("TLS cert/key files not found, running without TLS")
+
+    uvicorn.run("ungula.main:app", **kwargs)
 
 
 if __name__ == "__main__":

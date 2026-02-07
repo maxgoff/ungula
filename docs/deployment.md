@@ -3,9 +3,12 @@
 ## Table of Contents
 
 - [Local Development](#local-development)
+- [CLI Commands](#cli-commands)
 - [Configuration Reference](#configuration-reference)
 - [Channel Setup](#channel-setup)
 - [Production Deployment](#production-deployment)
+- [Docker Compose](#docker-compose)
+- [TLS Configuration](#tls-configuration)
 - [Docker Sandbox](#docker-sandbox)
 - [Node Client](#node-client)
 
@@ -97,6 +100,37 @@ ruff format .                # Format
 cd frontend
 npm run lint
 ```
+
+---
+
+## CLI Commands
+
+Ungula provides a CLI for managing the server. Install with `pip install -e ./backend`, then:
+
+| Command | Description |
+|---|---|
+| `ungula start` | Start server in foreground |
+| `ungula start -d` | Start as background daemon (PID file at `~/.ungula/ungula.pid`) |
+| `ungula start --host 0.0.0.0 --port 9000` | Override host/port |
+| `ungula start --tls-cert cert.pem --tls-key key.pem` | Start with TLS |
+| `ungula stop` | Stop the daemon (SIGTERM, then SIGKILL after 10s) |
+| `ungula status` | Show running/stopped, PID, and health check |
+| `ungula logs` | Show last 50 log lines |
+| `ungula logs -n 100 -f` | Follow last 100 lines |
+| `ungula init` | Create `~/.ungula/` directory structure and `config.yaml` |
+| `ungula init --force` | Overwrite existing config |
+| `ungula rotate-key` | Generate new JWT secret (prompts for confirmation) |
+| `ungula rotate-key -y` | Generate new JWT secret without prompt |
+
+Logs are written to `~/.ungula/logs/ungula.log`.
+
+### Service Files
+
+Pre-built service files are in the `deploy/` directory:
+
+- **systemd** (Linux): `deploy/ungula.service` — copy to `/etc/systemd/system/` and customize paths
+- **launchd** (macOS): `deploy/com.ungula.agent.plist` — copy to `~/Library/LaunchAgents/`
+- **nginx**: `deploy/nginx.conf` — reverse proxy with TLS, WebSocket, and SSE support
 
 ---
 
@@ -567,7 +601,7 @@ npm run build
 
 ### systemd Service (Linux)
 
-Create `/etc/systemd/system/ungula.service`:
+A ready-to-use unit file is at `deploy/ungula.service`. Copy to `/etc/systemd/system/ungula.service` and customize paths:
 
 ```ini
 [Unit]
@@ -605,7 +639,7 @@ sudo journalctl -u ungula -f
 
 ### launchd Service (macOS)
 
-Create `~/Library/LaunchAgents/com.ungula.agent.plist`:
+A ready-to-use plist is at `deploy/com.ungula.agent.plist`. Copy to `~/Library/LaunchAgents/` and customize paths:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -656,6 +690,75 @@ Before exposing Ungula to the network:
 - [ ] Set `file_tools.denied_extensions` to block sensitive file types
 - [ ] Run `POST /api/security/audit` periodically and review findings
 - [ ] Restrict `node_system.deny_commands` for any dangerous commands
+
+---
+
+## Docker Compose
+
+Ungula ships with a `Dockerfile` (multi-stage build) and `docker-compose.yml` for containerized deployment.
+
+### Quick Start
+
+```bash
+# Copy and edit environment variables
+cp .env.example .env
+# Edit .env with your API keys
+
+# Build and start
+docker compose up
+
+# With Redis task queue:
+docker compose --profile redis up
+```
+
+The Docker image:
+- Builds the React frontend and serves it at `/`
+- Installs the Python backend with the CLI
+- Runs as non-root `ungula` user
+- Stores data in `/data` volume
+- Exposes port 8001
+
+### Custom Build
+
+```bash
+docker build -t ungula .
+docker run -d \
+  -p 8001:8001 \
+  -v ungula-data:/data \
+  -e UNGULA_AUTH_SECRET_KEY=your-secret \
+  -e UNGULA_ANTHROPIC_API_KEY=sk-ant-... \
+  ungula
+```
+
+---
+
+## TLS Configuration
+
+Ungula supports TLS in two ways:
+
+### 1. Via CLI (direct)
+
+```bash
+ungula start --tls-cert /path/to/cert.pem --tls-key /path/to/key.pem
+```
+
+### 2. Via Config File
+
+```yaml
+server:
+  tls_cert_path: /etc/ssl/certs/ungula.pem
+  tls_key_path: /etc/ssl/private/ungula.key
+```
+
+CLI arguments take precedence over config file values. If the certificate or key file is missing, the server logs a warning and starts without TLS.
+
+### 3. Via Reverse Proxy (recommended)
+
+For production, terminate TLS at the reverse proxy level. See `deploy/nginx.conf` for a complete nginx configuration with:
+- HTTP to HTTPS redirect
+- WebSocket upgrade support (`/ws/`)
+- SSE buffering disabled (`/api/channels/events`, `/api/chat/`)
+- Gzip compression
 
 ---
 

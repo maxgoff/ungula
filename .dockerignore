@@ -1,0 +1,32 @@
+.git
+.gitignore
+.venv
+.env
+*.pem
+*.key
+*.cert
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+.mypy_cache
+.pytest_cache
+.ruff_cache
+*.egg-info
+
+# Node
+node_modules
+
+# Build artifacts
+dist
+build
+
+# Project files not needed in image
+deploy/
+docs/
+skills/
+PLAN.md
+CLAUDE.md
+*.md
+!backend/README.md

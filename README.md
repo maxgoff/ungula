@@ -58,16 +58,7 @@ Ungula is a fully refactored version of [OpenClaw](https://github.com/maxgoff/op
                                     +--------+
 ```
 
-## Quick Start
-
-### Prerequisites
-
-- Python 3.11+
-- Node.js 18+ (for the frontend)
-- SQLite (bundled with Python)
-- Docker (optional, for sandbox)
-
-### Backend
+## Installation
 
 ```bash
 cd backend
@@ -75,29 +66,42 @@ python -m venv .venv
 source .venv/bin/activate    # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
 
-# Initialize config
-mkdir -p ~/.ungula
-cat > ~/.ungula/config.yaml << 'EOF'
-server:
-  host: 0.0.0.0
-  port: 8001
+# Initialize config directory and generate a secure secret key
+ungula init
+```
 
-llm:
-  default_provider: anthropic
-  anthropic:
-    api_key: YOUR_KEY_HERE
+Edit `~/.ungula/config.yaml` to add your LLM API keys.
 
-auth:
-  secret_key: CHANGE-ME-IN-PRODUCTION
-EOF
+## Quick Start
 
-# Run the server
-python -m ungula.main
+### Prerequisites
+
+- Python 3.11+
+- Node.js 18+ (for the frontend)
+- SQLite (bundled with Python)
+- Docker (optional, for sandbox or deployment)
+
+### Using the CLI
+
+```bash
+ungula start              # Run in foreground
+ungula start -d           # Run as background daemon
+ungula status             # Check if running
+ungula logs -f            # Follow log output
+ungula stop               # Stop the daemon
 ```
 
 The backend starts at `http://localhost:8001`. API docs are available at `http://localhost:8001/docs` (Swagger UI).
 
-### Frontend
+### Docker
+
+```bash
+cp .env.example .env      # Edit with your API keys
+docker compose up          # Start Ungula
+docker compose --profile redis up  # With Redis queue
+```
+
+### Frontend (Development)
 
 ```bash
 cd frontend
@@ -105,7 +109,7 @@ npm install
 npm run dev
 ```
 
-The dashboard opens at `http://localhost:3001` and proxies API requests to the backend.
+The dashboard opens at `http://localhost:3001` and proxies API requests to the backend. In Docker, the frontend is served directly at `http://localhost:8001/`.
 
 ### First Steps
 
@@ -216,14 +220,33 @@ ungula/
 │   │   ├── capabilities.py  # Capability registration
 │   │   └── handlers.py      # Built-in command handlers
 │   └── pyproject.toml
+├── deploy/                  # Service files
+│   ├── ungula.service       # systemd unit file
+│   ├── com.ungula.agent.plist  # macOS launchd plist
+│   └── nginx.conf           # nginx reverse proxy config
 ├── docs/                    # Documentation
 │   ├── api-reference.md     # API endpoint reference
 │   ├── deployment.md        # Deployment guide
 │   └── templates/           # Workspace file templates
 ├── skills/                  # User skill directory
+├── Dockerfile               # Multi-stage Docker build
+├── docker-compose.yml       # Docker Compose config
+├── .env.example             # Environment variable template
 ├── CLAUDE.md                # Development guidelines
 └── PLAN.md                  # Development roadmap
 ```
+
+## CLI Reference
+
+| Command | Description |
+|---|---|
+| `ungula start` | Start server in foreground |
+| `ungula start -d` | Start as background daemon |
+| `ungula stop` | Stop the daemon |
+| `ungula status` | Show running/stopped status and health |
+| `ungula logs [-n 50] [-f]` | View or follow server logs |
+| `ungula init [--force]` | Create config directory and generate config |
+| `ungula rotate-key [-y]` | Generate new JWT secret key |
 
 ## Development
 

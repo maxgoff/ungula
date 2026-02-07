@@ -238,6 +238,8 @@ class ServerConfig(BaseModel):
         default_factory=lambda: ["http://localhost:3001", "http://localhost:3000"],
         description="Allowed CORS origins",
     )
+    tls_cert_path: str | None = Field(default=None, description="Path to TLS certificate file")
+    tls_key_path: str | None = Field(default=None, description="Path to TLS private key file")
 
 
 class DiscordChannelConfig(BaseModel):

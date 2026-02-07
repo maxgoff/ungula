@@ -58,6 +58,8 @@ dependencies = [
     "docker>=7.0.0",
     # Template rendering for webhooks
     "jinja2>=3.1.0",
+    # CLI
+    "click>=8.1.0",
 ]
 
 [project.optional-dependencies]
@@ -76,7 +78,7 @@ dev = [
 ]
 
 [project.scripts]
-ungula = "ungula.main:run"
+ungula = "ungula.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

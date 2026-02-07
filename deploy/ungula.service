@@ -1,0 +1,25 @@
+[Unit]
+Description=Ungula AI Agent Platform
+After=network.target
+Documentation=https://github.com/maxgoff/ungula
+
+[Service]
+Type=simple
+User=ungula
+Group=ungula
+WorkingDirectory=/opt/ungula/backend
+Environment=UNGULA_HOME=/opt/ungula/config
+ExecStart=/opt/ungula/backend/.venv/bin/ungula start
+Restart=always
+RestartSec=5
+TimeoutStopSec=15
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/ungula/config
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
