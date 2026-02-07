@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { agents } from '../api';
+import { agents, config } from '../api';
 
 const AGENT_TYPES = ['orchestrator', 'coder', 'researcher', 'writer', 'analyst', 'custom'];
 
@@ -19,13 +19,36 @@ function AgentForm({ agent, onSave, onCancel, providers }) {
     }
   );
   const [saving, setSaving] = useState(false);
+  const [models, setModels] = useState([]);
+  const [loadingModels, setLoadingModels] = useState(false);
+
+  // Fetch models when provider changes
+  useEffect(() => {
+    const providerName = form.provider;
+    if (!providerName) {
+      setModels([]);
+      return;
+    }
+    let cancelled = false;
+    setLoadingModels(true);
+    config.getProviderModels(providerName)
+      .then((data) => {
+        if (!cancelled) setModels(data.models || []);
+      })
+      .catch(() => {
+        if (!cancelled) setModels([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingModels(false);
+      });
+    return () => { cancelled = true; };
+  }, [form.provider]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
     try {
       const payload = { ...form };
-      // Clean empty strings to null
       for (const key of ['provider', 'model', 'system_prompt', 'persona']) {
         if (payload[key] === '') payload[key] = null;
       }
@@ -41,6 +64,8 @@ function AgentForm({ agent, onSave, onCancel, providers }) {
       setSaving(false);
     }
   };
+
+  const enabledProviders = (providers || []).filter((p) => p.enabled && p.healthy !== false);
 
   return (
     <form onSubmit={handleSubmit} className="bg-gray-750 rounded-lg p-4 space-y-3 border border-gray-600">
@@ -83,23 +108,41 @@ function AgentForm({ agent, onSave, onCancel, providers }) {
         </div>
         <div>
           <label className="block text-xs text-gray-400 mb-1">Provider</label>
-          <input
-            type="text"
+          <select
             value={form.provider || ''}
-            onChange={(e) => setForm({ ...form, provider: e.target.value })}
+            onChange={(e) => setForm({ ...form, provider: e.target.value, model: '' })}
             className="w-full bg-gray-700 text-white text-sm rounded px-3 py-1.5 border border-gray-600 focus:border-indigo-500 outline-none"
-            placeholder="(default)"
-          />
+          >
+            <option value="">(default)</option>
+            {enabledProviders.map((p) => (
+              <option key={p.name} value={p.name}>{p.display_name}</option>
+            ))}
+          </select>
         </div>
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Model</label>
-          <input
-            type="text"
-            value={form.model || ''}
-            onChange={(e) => setForm({ ...form, model: e.target.value })}
-            className="w-full bg-gray-700 text-white text-sm rounded px-3 py-1.5 border border-gray-600 focus:border-indigo-500 outline-none"
-            placeholder="(default)"
-          />
+          <label className="block text-xs text-gray-400 mb-1">
+            Model {loadingModels && <span className="text-gray-500 ml-1">loading...</span>}
+          </label>
+          {models.length > 0 ? (
+            <select
+              value={form.model || ''}
+              onChange={(e) => setForm({ ...form, model: e.target.value })}
+              className="w-full bg-gray-700 text-white text-sm rounded px-3 py-1.5 border border-gray-600 focus:border-indigo-500 outline-none"
+            >
+              <option value="">(default)</option>
+              {models.map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              value={form.model || ''}
+              onChange={(e) => setForm({ ...form, model: e.target.value })}
+              className="w-full bg-gray-700 text-white text-sm rounded px-3 py-1.5 border border-gray-600 focus:border-indigo-500 outline-none"
+              placeholder={form.provider ? '(select or type)' : '(default)'}
+            />
+          )}
         </div>
         <div>
           <label className="block text-xs text-gray-400 mb-1">Temperature</label>
@@ -167,6 +210,7 @@ function AgentForm({ agent, onSave, onCancel, providers }) {
 
 export default function Agents() {
   const [agentList, setAgentList] = useState([]);
+  const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editingId, setEditingId] = useState(null);
@@ -184,7 +228,12 @@ export default function Agents() {
     }
   };
 
-  useEffect(() => { fetchAgents(); }, []);
+  useEffect(() => {
+    fetchAgents();
+    config.getProviders().then((data) => {
+      setProviders(data.providers || []);
+    }).catch(() => {});
+  }, []);
 
   const handleCreate = async (data) => {
     await agents.create(data);
@@ -224,7 +273,7 @@ export default function Agents() {
 
       {showCreate && (
         <div className="mb-4">
-          <AgentForm onSave={handleCreate} onCancel={() => setShowCreate(false)} />
+          <AgentForm onSave={handleCreate} onCancel={() => setShowCreate(false)} providers={providers} />
         </div>
       )}
 
@@ -244,6 +293,7 @@ export default function Agents() {
                   agent={agent}
                   onSave={handleUpdate}
                   onCancel={() => setEditingId(null)}
+                  providers={providers}
                 />
               ) : (
                 <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 flex items-center justify-between">

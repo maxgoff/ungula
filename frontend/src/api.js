@@ -283,6 +283,10 @@ export const config = {
       method: 'DELETE',
     });
   },
+
+  async getProviderModels(name) {
+    return apiFetch(`/config/providers/${name}/models`);
+  },
 };
 
 // Channels API

@@ -416,6 +416,17 @@ async def list_providers(request: Request) -> ProvidersResponse:
     )
 
 
+@router.get("/providers/{name}/models")
+async def list_provider_models(request: Request, name: str) -> dict[str, Any]:
+    """List available models for a specific provider."""
+    registry = request.app.state.registry
+    try:
+        models = await registry.list_models(provider=name)
+        return {"provider": name, "models": models.get(name, [])}
+    except Exception as e:
+        return {"provider": name, "models": [], "error": str(e)}
+
+
 @router.put("/providers/{name}")
 async def update_provider(
     request: Request,
