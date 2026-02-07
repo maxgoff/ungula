@@ -160,7 +160,7 @@ class UrlFetchTool(Tool):
                 return ToolResult(
                     success=True,
                     output=text,
-                    metadata={
+                    data={
                         "status_code": resp.status_code,
                         "content_type": content_type,
                         "url": str(resp.url),

@@ -387,6 +387,11 @@ class SkillLoader:
                 logger.info("Skipping browser tool: playwright not installed")
                 return None
 
+        # Image processing tool needs workspace_dir
+        if tool_name == "image_process":
+            from ..config import get_workspace_dir
+            return tool_class(get_workspace_dir())
+
         # Default: try no-arg constructor
         try:
             return tool_class()
