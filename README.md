@@ -4,6 +4,8 @@
 
 Ungula is a fully refactored version of [OpenClaw](https://github.com/maxgoff/openclaw), rebuilt from the ground up in Python (FastAPI) and React. It is a self-hosted AI agent system that runs 24/7 — processing tasks, managing conversations across Discord/Telegram/Slack/Signal/iMessage, executing tools in a sandboxed environment, and coordinating companion devices over your LAN.
 
+![Ungula Dashboard](img/ungula_dashboard.png)
+
 ## Features
 
 - **8 LLM Providers** — OpenRouter, Anthropic, OpenAI, Google, xAI, NVIDIA, Ollama, and custom OpenAI-compatible endpoints. Automatic failover between providers.
