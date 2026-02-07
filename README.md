@@ -2,7 +2,7 @@
 
 **Autonomous AI agent platform with multi-model orchestration, extensible skills, and multi-channel messaging.**
 
-Ungula is a self-hosted AI agent system that runs 24/7 — processing tasks, managing conversations across Discord/Telegram/Slack/Signal/iMessage, executing tools in a sandboxed environment, and coordinating companion devices over your LAN.
+Ungula is a fully refactored version of [OpenClaw](https://github.com/maxgoff/openclaw), rebuilt from the ground up in Python (FastAPI) and React. It is a self-hosted AI agent system that runs 24/7 — processing tasks, managing conversations across Discord/Telegram/Slack/Signal/iMessage, executing tools in a sandboxed environment, and coordinating companion devices over your LAN.
 
 ## Features
 
