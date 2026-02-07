@@ -261,4 +261,4 @@ curl -X POST http://localhost:8001/api/skills/clawhub/install \
 
 ## License
 
-MIT
+[MIT](LICENSE)
