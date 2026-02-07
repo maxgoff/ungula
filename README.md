@@ -1,4 +1,10 @@
+<p align="center">
+  <img src="img/ungula_logo.png" alt="Ungula Logo" width="200">
+</p>
+
 # Ungula
+
+*Ungula* is a Latin term meaning "hoof, nail, or claw."
 
 **Autonomous AI agent platform with multi-model orchestration, extensible skills, and multi-channel messaging.**
 
