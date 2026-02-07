@@ -87,6 +87,10 @@ class SQLiteStorage(StorageBackend):
         """Get a new session."""
         return self.session_factory()
 
+    def session(self) -> AsyncSession:
+        """Get a new async session (public API for subsystems like NodeManager)."""
+        return self.session_factory()
+
     # Users
 
     async def create_user(self, data: UserCreate) -> User:
