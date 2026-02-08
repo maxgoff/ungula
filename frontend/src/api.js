@@ -558,13 +558,12 @@ export const pairing = {
 // Subagents API
 export const subagents = {
   async spawn(task, parentId = null, metadata = null) {
+    const body = { task };
+    if (parentId) body.parent_conversation_id = parentId;
+    if (metadata) body.metadata = metadata;
     return apiFetch('/subagents/spawn', {
       method: 'POST',
-      body: JSON.stringify({
-        task,
-        parent_conversation_id: parentId,
-        metadata,
-      }),
+      body: JSON.stringify(body),
     });
   },
 
