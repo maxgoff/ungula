@@ -236,21 +236,36 @@ export default function Agents() {
   }, []);
 
   const handleCreate = async (data) => {
-    await agents.create(data);
-    setShowCreate(false);
-    fetchAgents();
+    try {
+      await agents.create(data);
+      setShowCreate(false);
+      setError(null);
+      fetchAgents();
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const handleUpdate = async (data) => {
-    await agents.update(data.id, data);
-    setEditingId(null);
-    fetchAgents();
+    try {
+      await agents.update(data.id, data);
+      setEditingId(null);
+      setError(null);
+      fetchAgents();
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const handleDelete = async (id) => {
     if (!confirm(`Delete agent "${id}"?`)) return;
-    await agents.delete(id);
-    fetchAgents();
+    try {
+      await agents.delete(id);
+      setError(null);
+      fetchAgents();
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   return (
