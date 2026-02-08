@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 
 import httpx
 
-from ungula.tools.base import Tool, ToolResult
+from ungula.tools.base import Tool, ToolParameter, ToolResult
 
 logger = logging.getLogger(__name__)
 
@@ -61,34 +61,13 @@ class UrlFetchTool(Tool):
     description = "Fetch content from a URL. Supports GET and POST methods."
     cacheable = True
     cache_ttl = 120
-    parameters = {
-        "type": "object",
-        "properties": {
-            "url": {
-                "type": "string",
-                "description": "The URL to fetch",
-            },
-            "method": {
-                "type": "string",
-                "enum": ["GET", "POST"],
-                "description": "HTTP method (default: GET)",
-            },
-            "headers": {
-                "type": "object",
-                "description": "HTTP headers to send",
-                "additionalProperties": {"type": "string"},
-            },
-            "body": {
-                "type": "string",
-                "description": "Request body for POST requests",
-            },
-            "max_length": {
-                "type": "integer",
-                "description": "Max response length in characters (default: 8000)",
-            },
-        },
-        "required": ["url"],
-    }
+    parameters = [
+        ToolParameter(name="url", description="The URL to fetch", type="string", required=True),
+        ToolParameter(name="method", description="HTTP method (default: GET)", type="string", required=False, default="GET"),
+        ToolParameter(name="headers", description="HTTP headers to send", type="object", required=False),
+        ToolParameter(name="body", description="Request body for POST requests", type="string", required=False),
+        ToolParameter(name="max_length", description="Max response length in characters (default: 8000)", type="integer", required=False, default=8000),
+    ]
 
     async def execute(
         self,
