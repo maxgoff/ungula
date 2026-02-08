@@ -79,7 +79,7 @@ function AgentForm({ agent, onSave, onCancel, providers }) {
               onChange={(e) => setForm({ ...form, id: e.target.value })}
               className="w-full bg-gray-700 text-white text-sm rounded px-3 py-1.5 border border-gray-600 focus:border-indigo-500 outline-none"
               placeholder="my-agent"
-              pattern="^[a-z0-9_-]+$"
+              pattern="^[-a-z0-9_]+$"
               required
             />
           </div>
