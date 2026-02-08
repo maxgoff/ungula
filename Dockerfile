@@ -34,6 +34,7 @@ COPY docs/templates/ ./docs/templates/
 
 # Data volume — create and own before switching user
 ENV UNGULA_HOME=/data
+ENV UNGULA_DOCKER=1
 RUN mkdir -p /data && chown ungula:ungula /data
 VOLUME ["/data"]
 

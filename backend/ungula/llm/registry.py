@@ -7,6 +7,8 @@ and provider health tracking.
 
 import asyncio
 import logging
+import os
+import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Any, AsyncIterator
@@ -343,6 +345,22 @@ class ProviderRegistry:
         return result
 
 
+def _docker_rewrite_url(url: str | None) -> str | None:
+    """Rewrite localhost URLs to host.docker.internal when running in Docker.
+
+    This allows the same config.yaml to work both natively and inside a container.
+    """
+    if not url:
+        return url
+    if not (os.path.exists("/.dockerenv") or os.environ.get("UNGULA_DOCKER")):
+        return url
+    return re.sub(
+        r"(https?://)localhost(:\d+)?",
+        r"\1host.docker.internal\2",
+        url,
+    )
+
+
 def create_registry_from_config(config: LLMConfig) -> ProviderRegistry:
     """
     Create a provider registry from configuration.
@@ -363,7 +381,7 @@ def create_registry_from_config(config: LLMConfig) -> ProviderRegistry:
         if provider_config.enabled and provider_config.api_key:
             provider = provider_class(
                 api_key=provider_config.api_key,
-                base_url=provider_config.base_url,
+                base_url=_docker_rewrite_url(provider_config.base_url),
                 default_model=provider_config.default_model,
             )
             registry.register(provider)
@@ -379,7 +397,7 @@ def create_registry_from_config(config: LLMConfig) -> ProviderRegistry:
     # Ollama doesn't require API key
     if config.ollama.enabled:
         provider = OllamaProvider(
-            base_url=config.ollama.base_url,
+            base_url=_docker_rewrite_url(config.ollama.base_url),
             default_model=config.ollama.default_model,
         )
         registry.register(provider)
@@ -393,7 +411,7 @@ def create_registry_from_config(config: LLMConfig) -> ProviderRegistry:
                 name=custom.name,
                 display_name=custom.display_name,
                 api_key=custom.api_key,
-                base_url=custom.base_url,
+                base_url=_docker_rewrite_url(custom.base_url),
                 default_model=custom.default_model,
             )
             registry.register(provider)
